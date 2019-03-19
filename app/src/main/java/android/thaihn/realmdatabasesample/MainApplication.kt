@@ -14,7 +14,8 @@ class MainApplication : Application() {
     private fun initRealm() {
         Realm.init(applicationContext)
         val config = RealmConfiguration.Builder()
-            .name("RealmSimple")
+            .name("RealmSimple.realm")
+            .schemaVersion(1)
             .deleteRealmIfMigrationNeeded()
             .build()
         Realm.setDefaultConfiguration(config)
