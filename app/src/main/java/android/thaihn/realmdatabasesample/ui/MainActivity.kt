@@ -47,7 +47,11 @@ class MainActivity : AppCompatActivity(), ContactAdapter.ContactListener {
         }
 
         mBinding.btnEdit.setOnClickListener {
+            updateStudent()
+        }
 
+        mBinding.btnDelete.setOnClickListener {
+            deleteByAddress()
         }
     }
 
@@ -55,7 +59,6 @@ class MainActivity : AppCompatActivity(), ContactAdapter.ContactListener {
         mRealm?.executeTransaction { realm ->
             val result = realm.where(Contact::class.java).equalTo("id", item.id).findAll()
             result.deleteAllFromRealm()
-            Toast.makeText(applicationContext, "Delete contact id=${item.id} success", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -66,6 +69,22 @@ class MainActivity : AppCompatActivity(), ContactAdapter.ContactListener {
         mBinding.edtAddress.setText(item.address)
     }
 
+    private fun deleteByAddress() {
+        val address = mBinding.edtAddress.text.trim().toString()
+
+        if (address.isEmpty()) {
+            Toast.makeText(applicationContext, "Address is empty!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        mRealm?.executeTransaction {realm->
+            val result = realm
+                .where(Contact::class.java).equalTo("address", address)
+                .findAll()
+            result.deleteAllFromRealm()
+        }
+    }
+
     private fun updateStudent() {
         mContactEdit?.let {
             val name = mBinding.edtName.text.trim().toString()
@@ -74,12 +93,17 @@ class MainActivity : AppCompatActivity(), ContactAdapter.ContactListener {
 
             if (name.isEmpty() && phone.isEmpty() && address.isEmpty()) {
                 Toast.makeText(applicationContext, "Unless have one field name", Toast.LENGTH_SHORT)
-                        .show()
+                    .show()
                 return
             }
 
-            val newContact = Contact(it.id, name, phone, address)
+            mRealm?.executeTransaction { realm ->
+                val newContact = Contact(it.id, name, phone, address)
+                realm.insertOrUpdate(newContact)
+            }
 
+            releaseInput()
+            hideKeyboard()
         }
     }
 
@@ -128,23 +152,23 @@ class MainActivity : AppCompatActivity(), ContactAdapter.ContactListener {
 
     private fun addListenerDatabase() {
         mRealm?.where(Contact::class.java)
-                ?.sort("id", Sort.ASCENDING)
-                ?.findAll()
-                ?.let { contactResults ->
-                    if (contactResults.count() > 0) {
-                        val results = arrayListOf<Contact>()
-                        contactResults.forEach {
-                            results.add(it)
-                        }
-
-                        Log.d(TAG, "Contacts:$results")
-                        mContactAdapter.addAllContact(results)
+            ?.sort("id", Sort.ASCENDING)
+            ?.findAll()
+            ?.let { contactResults ->
+                if (contactResults.count() > 0) {
+                    val results = arrayListOf<Contact>()
+                    contactResults.forEach {
+                        results.add(it)
                     }
 
-                    contactResults.addChangeListener { realmResults, changeSet ->
-                        mContactAdapter.addAllContact(realmResults)
-                    }
+                    Log.d(TAG, "Contacts:$results")
+                    mContactAdapter.addAllContact(results)
                 }
+
+                contactResults.addChangeListener { realmResults, changeSet ->
+                    mContactAdapter.addAllContact(realmResults)
+                }
+            }
     }
 
     private fun hideKeyboard() {
